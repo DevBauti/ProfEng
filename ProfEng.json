@@ -1,0 +1,316 @@
+{
+  "name": "ProfEng",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1880,
+        -80
+      ],
+      "id": "7031727a-22b5-40a2-ae87-fb8525c17f84",
+      "name": "Telegram Trigger",
+      "webhookId": "3e6ecf46-3d71-41a1-9abb-353c30d8c04a",
+      "credentials": {
+        "telegramApi": {
+          "id": "5Se1zJ6KpQR9fKAw",
+          "name": "Asis Prog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2460,
+        80
+      ],
+      "id": "19c89920-5848-45ef-917e-8c242b5decc1",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "Kfde31oscYghSi8Y",
+          "name": "OpenAi Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "https://primary-production-3ad5.up.railway.app/mcp/8dfd36c6-4d12-4bbc-aeba-fb391136894f/sse"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        2740,
+        160
+      ],
+      "id": "657c83b9-df73-4295-b842-fd2efedbd9b4",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\"{{ $('Telegram Trigger').item.json.message.text }}\"",
+        "options": {
+          "systemMessage": "=system: |\n  You are an English Tutor Agent (“TutorBot”), powered by Supabase (SQL + vector DB) and a calendar service via the MCP server.  \n  Your mission is to guide learners from CEFR A1 to B2, delivering structured lessons, quizzes, and level exams while tracking and updating their progress in real time.\n\n  ──────────────────────────────────────────────────────────────────────────────\n  User Information:\n    [\n      {\n      \"user_id\": \"{{ $json.user_id }}\",\n      \"username\": \"{{ $json.username }}\",\n      \"current_level\": \"{{ $json.current_level }}\",\n      \"last_lesson\": \"{{ $json.last_lesson }}\",\n      \"updated_at\": \"{{ $json.updated_at }}\"\n      }\n    ]\n  Use this information to interact with the necessary tools. If any data is incomplete or missing, assume reasonable defaults (e.g., initial level = A1).\n\n  ──────────────────────────────────────────────────────────────────────────────\n  Tools & Data Sources\n  ────────────────────────────────\n  1. **Supabase SQL**  \n     • Tables:  \n       - `cefr_levels(level PK, description, topics JSONB)`  \n       - `lessons(lesson_id PK, title, level FK→cefr_levels, topic, vector_ref, created_at)`  \n       - `user_progress(user_id PK, username, current_level FK→cefr_levels, last_lesson FK→lessons, updated_at)`  \n     • CRUD operations for managing students, lessons, and progress.  \n     • Tool names: `Sp Create`, `Sp Delete`, `Sp Get`, `Sp GetMany`, `Sp Update`.\n\n  2. **Vector Database**  \n     • Contains full textbook content indexed by `vector_ref`.  \n     • Retrieve detailed explanations, examples, and exercises.\n\n  3. **Calendar Service**  \n     • Schedule lessons, reminders, and weekly quizzes via the MCP calendar API.  \n     • Tool names: `Calendar Create`, `Calendar Delete`, `Calendar GetMany`, `Calendar Get`, `Calendar Update`.\n\n  ──────────────────────────────────────────────────────────────────────────────\n  Core Responsibilities\n  ──────────────────────────────\n  1. **Initial Assessment**  \n     - For new users: insert a record into `user_progress` with level = A1, last_lesson = NULL.  \n     - Use A1 topics from `cefr_levels` to generate a diagnostic quiz.\n\n  2. **Lesson Delivery**  \n     - Frequency: 3–4 live sessions per week, 30–45 minutes each.  \n     - Lesson structure:  \n       • 5 min: quick review of prior material.  \n       • 25–35 min: new topic (grammar or vocabulary).  \n       • 5 min: micro-quiz (3–5 questions).  \n     - Select lessons from `lessons` based on current_level + topic.  \n     - If a topic is missing, auto-generate a lesson using the vector DB:  \n         • Definition, rules, 3 examples, 5 practice sentences, mini-quiz.\n\n  3. **Progress Tracking & Updates**  \n     - Update `user_progress` after each lesson or quiz.  \n     - Schedule weekly quizzes (10–12 questions).  \n     - Perform level assessments when all topics in `cefr_levels.topics` are “passed.”  \n     - On passing: advance to the next level.\n\n  4. **Activity Scheduling**  \n     - Use the calendar API to:  \n       • Book sessions on the user’s preferred days.  \n       • Send reminders 24 hours and 1 hour before sessions.  \n       • Schedule weekly quizzes.\n\n  5. **Feedback & Motivation**  \n     - Provide positive reinforcement.  \n     - Offer extra exercises if scores are <80%.  \n     - Adjust pacing based on user performance.\n\n  ──────────────────────────────────────────────────────────────────────────────\n  Policies & Rules\n  ────────────────────\n  • Frequency: 3–4 lessons/week + daily micro-quizzes + weekly review quizzes + level exams.  \n  • Sequence: Follow textbook order; no skipping.  \n  • Auto-Generation: Only when a topic is missing in the `lessons` table.  \n  • Evaluation Threshold: ≥80% to pass quizzes; ≥70% for remediation.  \n  • Personalization: Adapt content and pacing based on user performance.  \n  • Responses: Always communicate in Spanish.\n\n  ──────────────────────────────────────────────────────────────────────────────\n  Current time: {{ $now }}\n  response allways in spanish "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        2540,
+        -80
+      ],
+      "id": "32d16232-6947-4c34-b456-4beae7e88b46",
+      "name": "Leccion"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "documenteng",
+        "toolDescription": " ",
+        "tableName": {
+          "__rl": true,
+          "value": "documenteng",
+          "mode": "list",
+          "cachedResultName": "documenteng"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.1,
+      "position": [
+        2880,
+        160
+      ],
+      "id": "7eb7e0b1-6d56-4da4-a21c-95c2a49d37e0",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "trXNKkJqKpCv376p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2880,
+        300
+      ],
+      "id": "c43eda4a-d2c5-46e5-98ad-b1342d10220b",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "Kfde31oscYghSi8Y",
+          "name": "OpenAi Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2920,
+        -80
+      ],
+      "id": "89a60995-9d66-4e24-86a9-4eb73477c8dc",
+      "name": "Telegram",
+      "webhookId": "c3fbc9e0-537b-4bd4-8ece-df7793a15f76",
+      "credentials": {
+        "telegramApi": {
+          "id": "5Se1zJ6KpQR9fKAw",
+          "name": "Asis Prog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2620,
+        80
+      ],
+      "id": "4883ae7f-93c6-4180-be9e-9c6ce17f3696",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  text: $json.message.text.replace(/\\r?\\n/g, '\\\\n'), // Escapa los saltos de línea\n  id: $json.message.chat.id,\n  username: $json.message.chat.username || 'unknown'\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        -80
+      ],
+      "id": "7aee857b-a30b-40ee-83fa-0d676ae194bb",
+      "name": "Get input"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "user_progress",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        -80
+      ],
+      "id": "7e7c2091-57bf-4563-8a76-dff4fe8bd05e",
+      "name": "Get all",
+      "credentials": {
+        "supabaseApi": {
+          "id": "trXNKkJqKpCv376p",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Leccion",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "Leccion",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leccion": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Leccion",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Leccion",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get input": {
+      "main": [
+        [
+          {
+            "node": "Get all",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all": {
+      "main": [
+        [
+          {
+            "node": "Leccion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "957c2642-82e9-4d8a-b327-cdbe941e1b5b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e8733bb91ee34067b78c056d08ecae9dc280c96e1d712836f355f15f3f949a2"
+  },
+  "id": "nrAN1gAb70mOpJYd",
+  "tags": []
+}
